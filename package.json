@@ -1,0 +1,11 @@
+{
+    "name": "turnos",
+    "version": "1.0.0",
+    "type": "module",
+    "scripts": {
+        "start": "node generador.js"
+    },
+    "dependencies": {
+        "mathjs": "^14.4.0"
+    }
+}

@@ -1,0 +1,7 @@
+node_modules/
+.env
+.DS_Store
+mes_3.jpeg
+mes_4.jpeg
+matriz_fusion.json
+planilla.js
