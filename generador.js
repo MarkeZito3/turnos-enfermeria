@@ -182,15 +182,15 @@ const asignarFrancos = (anio, mes) => {
 
         //Franco en días entre semana
         let contF = 1;
-        while (enfermero.francos[0] > 0) { // si ya no tiene francos, salir del bucle
+        while (enfermero.francos[0] > 0) { 
             for (let semana of diasEntreS) {
-                if (enfermero.francos[0] <= 0) break; // si ya no tiene francos, salir del bucle
+                if (enfermero.francos[0] <= 0) break; 
                 if (matriz[semana[0] - 1] === 'F') {
-                    matriz[semana[contF] - 1] = 'F'; // asignar franco
+                    matriz[semana[contF] - 1] = 'F'; 
                     contF++;
                 }
-                matriz[semana[0] - 1] = 'F'; // asignar franco
-                enfermero.francos[0]--; // restar un franco
+                matriz[semana[0] - 1] = 'F'; 
+                enfermero.francos[0]--; 
             }
         }
 
@@ -198,26 +198,131 @@ const asignarFrancos = (anio, mes) => {
     });
 };
 
-// uso de la función
-try {
-    const turnos = generarMatrizTurnos(2025, 4);
-    const francos = asignarFrancos(2025, 4);
-    function matrizFusionada(matrizTurnos, matrizLicencias) {
-        return matrizTurnos.map((fila, i) =>
-            fila.map((turno, j) => {
-            const licencia = matrizLicencias[i]?.[j];
-            // Si hay una licencia 'F' y el turno no es 'L', se reemplaza por 'F'
-            if (licencia === 'F' && turno !== 'L') {
-                return 'F';
+// Fusiona las matrices de turnos y licencias
+function matrizFusionada(matrizTurnos, matrizLicencias) {
+    return matrizTurnos.map((fila, i) =>
+        fila.map((turno, j) => {
+        const licencia = matrizLicencias[i]?.[j];
+        // Si hay una licencia 'F' y el turno no es 'L', se reemplaza por 'F'
+        if (licencia === 'F' && turno !== 'L') {
+            return 'F';
+        }
+            return turno;
+        })
+    );
+}
+
+// Transponer Matriz (convertir filas en columnas y viceversa)
+function transponerMatriz(matriz) {
+    return matriz[0].map((_, i) => matriz.map(fila => fila[i])); 
+}
+
+//
+function planificarNoches(matrizTranspuesta) {
+
+    let matriz = [];
+    let cont_dias = 0;
+    // Contar la cantidad de turnos M, T y N
+    matrizTranspuesta.forEach(dia => {
+        let cont_M = [];
+        let rotativoM = [];
+        let cont_T = [];
+        let rotativoT = [];
+        let cont_N = [];
+        let cont_F = [];
+        let cont_L = [];
+        let i = 0; // ubicacion de cada enfermeros
+        dia.forEach(turno =>{
+            if (turno === 'M') {
+                if (enfermeros[i].horarioRotativo.length > 0){
+                    rotativoM.push(enfermeros[i].id);
+                }
+                cont_M.push(enfermeros[i].id);
+            } else if (turno === 'T') {
+                if (enfermeros[i].horarioRotativo.length > 0){
+                    rotativoT.push(enfermeros[i].id);
+                }
+                cont_T.push(enfermeros[i].id);
+            } else if (turno === 'N') {
+                cont_N.push(enfermeros[i].id);
+            } else if (turno === 'F') {
+                cont_F.push(enfermeros[i].id);
+            } else if (turno === 'L') {
+                cont_L.push(enfermeros[i].id);
             }
-                return turno;
-            })
-        );
-    }      
+            i++;
+        });
+        while ((cont_M.length > 6 || cont_T.length > 6) && cont_N.length <= 4) {
+            if (cont_M.length > 6 && rotativoM.length > 0 && cont_N.length < 6) {
+                const randomIndex = Math.floor(Math.random() * rotativoM.length);
+                const randomEnfermero = rotativoM[randomIndex];
+                // se verifica que esté en cont_M antes de moverlo
+                const indexEnM = cont_M.indexOf(randomEnfermero);
+                if (indexEnM !== -1) { // si está en cont_M lo movemos a cont_N
+                    cont_M.splice(indexEnM, 1);
+                    cont_N.push(randomEnfermero);
+                }
+                rotativoM.splice(randomIndex, 1);
+            }
+            if (cont_T.length > 6 && rotativoT.length > 0 && cont_N.length < 6) {
+                const randomIndex = Math.floor(Math.random() * rotativoT.length);
+                const randomEnfermero = rotativoT[randomIndex];
+                const indexEnT = cont_T.indexOf(randomEnfermero);
+                if (indexEnT !== -1) {
+                    cont_T.splice(indexEnT, 1);
+                    cont_N.push(randomEnfermero);
+                }
+                rotativoT.splice(randomIndex, 1);
+            }
+        }
+        
 
-    console.log(matrizFusionada(turnos, francos));
-    writeFileSync('matriz_fusion.json', JSON.stringify(matrizFusionada(turnos, francos), null, 2));
+        //asignar en la matriz 'matriz' los turnos M, T, F y L dependiendo de los nuevos criterios
+        let diaMatriz = Array(enfermeros.length).fill(''); 
+        cont_M.forEach(id => {
+            const index = enfermeros.findIndex(enfermero => enfermero.id === id);
+            diaMatriz[index] = 'M'; // Asignar turno M
+        });
+        cont_T.forEach(id => {
+            const index = enfermeros.findIndex(enfermero => enfermero.id === id);
+            diaMatriz[index] = 'T'; // Asignar turno T
+        });
+        cont_N.forEach(id => {
+            const index = enfermeros.findIndex(enfermero => enfermero.id === id);
+            diaMatriz[index] = 'N'; // Asignar turno N
+        });
+        cont_F.forEach(id => {
+            const index = enfermeros.findIndex(enfermero => enfermero.id === id);
+            diaMatriz[index] = 'F'; // Asignar franco
+        });
+        cont_L.forEach(id => {
+            const index = enfermeros.findIndex(enfermero => enfermero.id === id);
+            diaMatriz[index] = 'L'; // Asignar licencia
+        });
 
-} catch (error) {
-    console.error("Error:", error.message);
+        matriz.push(diaMatriz); // Agregar el día a la matriz
+
+        cont_dias++;
+        console.log(`=======DIA ${cont_dias}========`);
+        console.log(`Turnos M: ${rotativoM.length}/${cont_M.length}: ${rotativoM}`);
+        console.log(`Turnos T: ${rotativoT.length}/${cont_T.length}: ${rotativoT}`);
+        console.log(`Turnos N: ${cont_N.length}: ${cont_N}`);
+    });
+    return transponerMatriz(matriz);
+}
+
+
+/**
+    Generador de turnos para enfermeros en un mes específico.
+    @param {number} anio - Año del calendario.
+    @param {number} mes - Mes del calendario (1-12).
+    @returns {Array} Matriz de turnos generada.
+**/
+function generadorTurnos(anio, mes) {
+    const turnos = generarMatrizTurnos(anio, mes);
+    const francos = asignarFrancos(anio, mes);
+    const matrizFusionadaV = matrizFusionada(turnos, francos);
+    const matrizTranspuesta = transponerMatriz(matrizFusionadaV);  
+    
+    return matrizFinal = planificarNoches(matrizTranspuesta);
 }

@@ -38,8 +38,8 @@ turnos-enfermeria/
 1. **Cloná el proyecto:**
 
 ```
-git clone https://github.com/tu-usuario/generador-turnos-enfermeria.git
-cd generador-turnos-enfermeria
+git clone https://github.com/MarkeZito3/turnos-enfermeria.git
+cd turnos-enfermeria
 ```
 Instalá Node.js si no lo tenés:
 https://nodejs.org
