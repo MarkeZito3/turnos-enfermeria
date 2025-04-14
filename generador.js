@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from 'fs';
+import { readFileSync } from 'fs';
 
 // Cargar enfermeros desde el JSON
 const enfermeros = JSON.parse(readFileSync('enfermeros.json'));
@@ -318,7 +318,7 @@ function planificarNoches(matrizTranspuesta) {
     @param {number} mes - Mes del calendario (1-12).
     @returns {Array} Matriz de turnos generada.
 **/
-function generadorTurnos(anio, mes) {
+export function generadorTurnos(anio, mes) {
     const turnos = generarMatrizTurnos(anio, mes);
     const francos = asignarFrancos(anio, mes);
     const matrizFusionadaV = matrizFusionada(turnos, francos);
