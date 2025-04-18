@@ -1,0 +1,112 @@
+.schedule-container {
+    padding: 20px;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  
+  .controls {
+    margin-bottom: 20px;
+    display: flex;
+    gap: 10px;
+  }
+  
+  table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+  
+  th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: center;
+  }
+  
+  th {
+    position: sticky;
+    top: 0;
+  }
+  
+  .cell {
+    min-width: 30px;
+    height: 30px;
+  }
+  
+  .cell.editable {
+    cursor: pointer;
+  }
+  
+  .cell.editable:hover {
+    background-color: gray;
+  }
+  
+  /* Colores para los diferentes tipos de turno */
+  .M {
+    background-color: #a5d6a7;
+    color: #2e7d32;
+  }
+  .T {
+    background-color: #90caf9;
+    color: #1565c0;
+  }
+  .N { 
+    background-color: #ce93d8;
+    color: #7b1fa2;
+   }
+  .F { 
+    background-color: #815A6B;
+    color: white;
+    font-weight: bold; }
+  .L { 
+    background-color: #586B7A; 
+    color: white;
+    font-weight: bold;   
+  } 
+
+
+/* ESTILOS PARA DÍAS */
+th {
+  text-align: center;
+  padding: 8px 4px;
+  min-width: 40px;
+  vertical-align: middle;
+  background-color: white; /* Fondo base */
+}
+
+/* FINES DE SEMANA - FONDO */
+.weekend-day {
+  background-color: #1357487a;
+  color: #ffffff; 
+  font-weight: bold;
+}
+
+/* FINES DE SEMANA - TEXTO */
+
+.weekend-day div {
+  color: #ffffff; 
+  font-weight: bold;
+}
+
+.day-name {
+  font-weight: normal;
+  font-size: 0.8em;
+  margin-top: 3px;
+}
+
+.nombre {
+  font-weight: bold;
+  background-color: #ffffff;
+}
+
+  .reset-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.reset-btn{
+  background-color: #2196F3;
+  color: white;
+}

@@ -1,0 +1,162 @@
+.employee-manager {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.controls {
+    display: flex;
+    margin-bottom: 20px;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+.employee-manager .controls {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.search-input {
+    flex-grow: 1;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    max-width: 400px;
+}
+
+.back-btn, .export-btn, .add-btn, .save-btn, .cancel-btn,
+.edit-btn, .delete-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.back-btn {
+    background-color: #f0f0f0;
+    color: #333;
+}
+
+.export-btn {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.add-btn, .save-btn {
+    background-color: #2196F3;
+    color: white;
+}
+
+.cancel-btn {
+    background-color: #f44336;
+    color: white;
+}
+
+.edit-btn {
+    background-color: #FFC107;
+    color: #333;
+    margin-right: 8px;
+}
+
+.delete-btn {
+    background-color: #f44336;
+    color: white;
+}
+
+.employee-form {
+    background-color: #f9f9f9;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+}
+
+.form-group input, .form-group select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.employee-list {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+th, td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+th {
+    background-color: #f2f2f2;
+    font-weight: 600;
+}
+
+.turno-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: 500;
+}
+
+.turno-badge.M {
+    background-color: #a5d6a7;
+    color: #2e7d32;
+}
+
+.turno-badge.T {
+    background-color: #90caf9;
+    color: #1565c0;
+}
+
+.turno-badge.N {
+    background-color: #ce93d8;
+    color: #7b1fa2;
+}
+
+.actions {
+    white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+    .controls {
+    flex-direction: column;
+    }
+    
+    .search-input {
+    max-width: 100%;
+    }
+    
+    table {
+    display: block;
+    }
+}

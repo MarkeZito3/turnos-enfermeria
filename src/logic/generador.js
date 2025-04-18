@@ -1,15 +1,37 @@
-import { readFileSync } from 'fs';
-
+import enfermeros from '../data/datos/enfermeros.json'; // Cambiar el nombre por ejemplo_de_enfermeros.json
+import feriados2021 from '../data/feriados/feriados_2021.json';
+import feriados2022 from '../data/feriados/feriados_2022.json';
+import feriados2023 from '../data/feriados/feriados_2023.json';
+import feriados2024 from '../data/feriados/feriados_2024.json';
+import feriados2025 from '../data/feriados/feriados_2025.json';
+import feriados2026 from '../data/feriados/feriados_2026.json';
 // Cargar enfermeros desde el JSON
-const enfermeros = JSON.parse(readFileSync('enfermeros.json'));
+
+// const enfermeros = JSON.parse(
+//   readFileSync(path.join(__dirname, '../../datos/enfermeros.json'), 'utf-8')
+// );
 if (!enfermeros || enfermeros.length === 0) {
     throw new Error("No se encontraron datos de enfermeros");
 }
 
-// Cargar feriados desde el JSON
-const feriados = (anio) => {
-    const feriados = JSON.parse(readFileSync(`feriados/feriados_${anio}.json`));
-    return feriados;
+export let enfermeros_Copia = enfermeros; 
+
+// Función para restaurar los datos originales
+const restaurarEnfermeros = () => {
+    enfermeros = JSON.parse(JSON.stringify(enfermeros_Copia));
+  };
+
+//Cargar feriados desde el JSON
+export const feriados = (anio) => {
+    switch(anio) {
+      case 2021: return feriados2021;
+      case 2022: return feriados2022;
+      case 2023: return feriados2023;
+      case 2024: return feriados2024;
+      case 2025: return feriados2025;
+      case 2026: return feriados2026;
+      default: return [];
+    }
 };
 
 /**
@@ -221,7 +243,7 @@ function transponerMatriz(matriz) {
 function planificarNoches(matrizTranspuesta) {
 
     let matriz = [];
-    let cont_dias = 0;
+    // let cont_dias = 0;
     // Contar la cantidad de turnos M, T y N
     matrizTranspuesta.forEach(dia => {
         let cont_M = [];
@@ -302,11 +324,11 @@ function planificarNoches(matrizTranspuesta) {
 
         matriz.push(diaMatriz); // Agregar el día a la matriz
 
-        cont_dias++;
-        console.log(`=======DIA ${cont_dias}========`);
-        console.log(`Turnos M: ${rotativoM.length}/${cont_M.length}: ${rotativoM}`);
-        console.log(`Turnos T: ${rotativoT.length}/${cont_T.length}: ${rotativoT}`);
-        console.log(`Turnos N: ${cont_N.length}: ${cont_N}`);
+        // cont_dias++;
+        // console.log(`=======DIA ${cont_dias}========`);
+        // console.log(`Turnos M: ${rotativoM.length}/${cont_M.length}: ${rotativoM}`);
+        // console.log(`Turnos T: ${rotativoT.length}/${cont_T.length}: ${rotativoT}`);
+        // console.log(`Turnos N: ${cont_N.length}: ${cont_N}`);
     });
     return transponerMatriz(matriz);
 }
@@ -319,10 +341,17 @@ function planificarNoches(matrizTranspuesta) {
     @returns {Array} Matriz de turnos generada.
 **/
 export function generadorTurnos(anio, mes) {
+
+    restaurarEnfermeros();
+
     const turnos = generarMatrizTurnos(anio, mes);
     const francos = asignarFrancos(anio, mes);
     const matrizFusionadaV = matrizFusionada(turnos, francos);
+    // console.log(matrizFusionadaV)
     const matrizTranspuesta = transponerMatriz(matrizFusionadaV);  
-    
-    return matrizFinal = planificarNoches(matrizTranspuesta);
+    const matrizFinal = planificarNoches(matrizTranspuesta);
+
+    // console.log(matrizFinal)
+
+    return matrizFinal;
 }
