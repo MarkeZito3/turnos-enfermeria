@@ -74,7 +74,7 @@ th {
 
 /* FINES DE SEMANA - FONDO */
 .weekend-day {
-  background-color: #1357487a;
+  background-color: rgba(19, 87, 72, 0.7);
   color: #ffffff; 
   font-weight: bold;
 }
@@ -109,4 +109,313 @@ th {
 .reset-btn{
   background-color: #2196F3;
   color: white;
+}
+
+.shift-counts td {
+  font-size: 0.9em;
+  padding: 8px 4px;
+}
+
+.counts-cell {
+  background-color: #f8f9fa;
+}
+
+.counts-cell div {
+  padding: 2px;
+  margin: 2px 0;
+  border-radius: 3px;
+}
+
+.below-minimum {
+  color: #721c24;
+  background-color: #f8d7da;
+}
+
+.above-minimum {
+  color: #155724;
+  background-color: #d4edda;
+}
+
+.cell.selected {
+  outline: 3px solid #2196F3;
+  outline-offset: -3px;
+  position: relative;
+  z-index: 1;
+}
+
+.edit-notice {
+  background-color: #e3f2fd;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+}
+
+.legend {
+  display: flex;
+  gap: 15px;
+  margin-top: 8px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legend .box {
+  width: 20px;
+  height: 20px;
+  display: inline-block;
+  border-radius: 3px;
+}
+
+.info-column {
+  background-color: #f8f9fa;
+  z-index: 2;
+}
+
+.nombre-column {
+  position: sticky;
+  left: 0;
+}
+
+.rotativo-column {
+  position: sticky;
+  right: 0;
+}
+
+.rotativo {
+  background-color: #f8f9fa;
+  text-align: center;
+  font-size: 0.9em;
+  padding: 8px;
+  position: sticky;
+  right: 0;
+  z-index: 1;
+}
+
+.rotativo.fijo {
+  color: #6c757d;
+  font-style: italic;
+}
+
+.rotativo.rotativo {
+  color: #0d6efd;
+  font-weight: bold;
+}
+
+.reset-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.reset-btn{
+  background-color: #2196F3;
+  color: white;
+}
+
+.shift-counts td {
+  font-size: 0.9em;
+  padding: 8px 4px;
+}
+
+.counts-cell {
+  background-color: #f8f9fa;
+}
+
+.counts-cell div {
+  padding: 2px;
+  margin: 2px 0;
+  border-radius: 3px;
+}
+
+.below-minimum {
+  color: #721c24;
+  background-color: #f8d7da;
+}
+
+.above-minimum {
+  color: #155724;
+  background-color: #d4edda;
+}
+
+.cell.selected {
+  outline: 3px solid #2196F3;
+  outline-offset: -3px;
+  position: relative;
+  z-index: 1;
+}
+
+.edit-notice {
+  background-color: #e3f2fd;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+}
+
+.legend {
+  display: flex;
+  gap: 15px;
+  margin-top: 8px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legend .box {
+  width: 20px;
+  height: 20px;
+  display: inline-block;
+  border-radius: 3px;
+}
+
+.info-column {
+  background-color: #f8f9fa;
+  position: sticky;
+  left: 0;
+  z-index: 2;
+}
+
+.rotativo {
+  background-color: #f8f9fa;
+  text-align: center;
+  font-size: 0.9em;
+  padding: 8px;
+}
+
+.rotativo.fijo {
+  color: #6c757d;
+  font-style: italic;
+}
+
+.rotativo.rotativo {
+  color: #0d6efd;
+  font-weight: bold;
+}
+
+.edit-modes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.edit-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.edit-button {
+  padding: 8px 16px;
+  border: 2px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  background-color: white;
+  transition: all 0.2s;
+}
+
+.edit-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.edit-button.active {
+  border-color: #2196F3;
+  background-color: #e3f2fd;
+  color: #1565c0;
+}
+
+.edit-button.M {
+  border-color: #a5d6a7;
+  color: #2e7d32;
+}
+
+.edit-button.M.active {
+  background-color: #a5d6a7;
+  color: white;
+}
+
+.edit-button.T {
+  border-color: #90caf9;
+  color: #1565c0;
+}
+
+.edit-button.T.active {
+  background-color: #90caf9;
+  color: white;
+}
+
+.edit-button.N {
+  border-color: #ce93d8;
+  color: #7b1fa2;
+}
+
+.edit-button.N.active {
+  background-color: #ce93d8;
+  color: white;
+}
+
+.edit-button.F {
+  border-color: #815A6B;
+  color: #815A6B;
+}
+
+.edit-button.F.active {
+  background-color: #815A6B;
+  color: white;
+}
+
+/* Estilos para las columnas de días especiales */
+.special-day-column {
+  background-color: rgba(19, 87, 72, 0.6);
+}
+
+.special-day-column.M {
+  background-color: rgba(46, 125, 50, 0.6);
+}
+
+.special-day-column.T {
+  background-color: rgba(21, 101, 192, 0.6);
+}
+
+.special-day-column.N {
+  background-color: rgba(123, 31, 162, 0.6);
+}
+
+.special-day-column.F {
+  background-color: rgba(129, 90, 107, 0.6);
+}
+
+.special-day-column.L {
+  background-color: rgba(88, 107, 122, 0.6);
+}
+
+/* Asegurar que la columna del conteo de turnos también mantenga el estilo */
+.counts-cell.special-day-column {
+  background-color: rgba(19, 87, 72, 0.6);
+}
+
+/* Asegurar que el texto sea legible en las celdas oscuras */
+.special-day-column.M,
+.special-day-column.T,
+.special-day-column.N,
+.special-day-column.F,
+.special-day-column.L {
+  color: white;
+  text-shadow: 0 0 2px rgba(0, 0, 0, 0.3);
+}
+
+.counts-cell.special-day-column .below-minimum,
+.counts-cell.special-day-column .above-minimum {
+  background-color: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  font-weight: bold;
 }

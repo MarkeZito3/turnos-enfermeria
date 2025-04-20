@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import * as XLSX from 'xlsx';
-import { generadorTurnos, enfermeros_Copia, feriados } from '../../logic/generador';
+import { generadorTurnos, enfermeros_Copia, feriados, reequilibrarTurnos } from '../../logic/generador';
 import './ScheduleTable.css';
 
 const ScheduleTable = () => {
@@ -14,6 +14,8 @@ const ScheduleTable = () => {
   const [year, setYear] = useState(anio_actual);
   const [month, setMonth] = useState(mes_actual);
   const [editMode, setEditMode] = useState(false);
+  const [selectedCell, setSelectedCell] = useState(null);
+  const [editType, setEditType] = useState('swap'); // 'swap' para intercambiar, 'insert' para insertar
 
   // Memoizar la función getStorageKey
   const getStorageKey = useCallback(() => `turnos-${year}-${month}`, [year, month]);
@@ -26,6 +28,7 @@ const ScheduleTable = () => {
         setMatriz(JSON.parse(savedData));
       } else {
         const nuevosTurnos = generadorTurnos(year, month);
+        const turnosReequilibrados = reequilibrarTurnos(nuevosTurnos, year, month, {M: 4, T: 4, N: 4});
         setMatriz(nuevosTurnos);
       }
     };
@@ -43,21 +46,44 @@ const ScheduleTable = () => {
   const handleCellClick = (rowIndex, colIndex) => {
     if (!editMode) return;
     
-    const newMatriz = matriz.map(row => [...row]);
-    const currentValue = newMatriz[rowIndex][colIndex];
-    
-    // Check if the cell value is "L" and return early if it is
-    if (currentValue === 'L') {
+    // Si la celda tiene "L", no permitir cambios
+    if (matriz[rowIndex][colIndex] === 'L') {
       return;
     }
 
-    // Rotar entre los valores posibles: M → T → N → F → M...
-    const values = ['M', 'T', 'N', 'F'];
-    const currentIndex = values.indexOf(currentValue);
-    const nextIndex = (currentIndex + 1) % values.length;
-    
-    newMatriz[rowIndex][colIndex] = values[nextIndex];
-    setMatriz(newMatriz);
+    if (editType === 'swap') {
+      if (selectedCell === null) {
+        // Primera selección
+        setSelectedCell({ rowIndex, colIndex });
+      } else {
+        // Segunda selección - intercambiar valores
+        const newMatriz = matriz.map(row => [...row]);
+        
+        // Verificar que la segunda celda no sea "L"
+        if (newMatriz[rowIndex][colIndex] === 'L') {
+          setSelectedCell(null);
+          return;
+        }
+
+        // Intercambiar valores
+        const temp = newMatriz[selectedCell.rowIndex][selectedCell.colIndex];
+        newMatriz[selectedCell.rowIndex][selectedCell.colIndex] = newMatriz[rowIndex][colIndex];
+        newMatriz[rowIndex][colIndex] = temp;
+        
+        setMatriz(newMatriz);
+        setSelectedCell(null); // Limpiar selección
+      }
+    } else if (editType !== 'swap') {
+      // Insertar el turno seleccionado
+      const newMatriz = matriz.map(row => [...row]);
+      newMatriz[rowIndex][colIndex] = editType;
+      setMatriz(newMatriz);
+    }
+  };
+
+  const handleEditTypeChange = (type) => {
+    setEditType(type);
+    setSelectedCell(null); // Limpiar selección al cambiar el modo
   };
 
   const exportToExcel = () => {
@@ -87,7 +113,8 @@ const ScheduleTable = () => {
   const resetToDefault = () => {
     if (window.confirm('¿Desea generar nuevamente los turnos?\nSe perderán los cambios no guardados.')) {
       const nuevosTurnos = generadorTurnos(year, month);
-      setMatriz(nuevosTurnos);
+      const turnosReequilibrados = reequilibrarTurnos(nuevosTurnos, year, month, {M: 4, T: 4, N: 4});
+      setMatriz(turnosReequilibrados);
     }
   };
 
@@ -115,6 +142,28 @@ const ScheduleTable = () => {
           })?.nombre 
         : null
     };
+  };
+
+  const MINIMUM_SHIFTS = { M: 5, T: 5, N: 4 };
+
+  // Función para contar turnos por día
+  const countShiftsForDay = (dayIndex) => {
+    const counts = { M: 0, T: 0, N: 0 };
+    matriz.forEach(row => {
+      if (row[dayIndex] === 'M') counts.M++;
+      if (row[dayIndex] === 'T') counts.T++;
+      if (row[dayIndex] === 'N') counts.N++;
+    });
+    return counts;
+  };
+
+  // Función para obtener el texto de horarios rotativos
+  const getHorariosRotativos = (index) => {
+    const enfermero = enfermeros_Copia[index];
+    if (!enfermero || !enfermero.horarioRotativo || enfermero.horarioRotativo.length === 0) {
+      return 'Fijo';
+    }
+    return enfermero.horarioRotativo.join(', ');
   };
 
   return (
@@ -153,57 +202,128 @@ const ScheduleTable = () => {
       
       {editMode && (
         <div className="edit-notice">
-          <p>Modo edición activado. Haz clic en cualquier celda para cambiar el turno.</p>
-          <div className="legend">
-            <span className="legend-item"><span className="box M"></span> Mañana</span>
-            <span className="legend-item"><span className="box T"></span> Tarde</span>
-            <span className="legend-item"><span className="box N"></span> Noche</span>
-            <span className="legend-item"><span className="box F"></span> Franco</span>
+          <div className="edit-modes">
+            <p>Modo edición activado.</p>
+            <div className="edit-buttons">
+              <button 
+                className={`edit-button ${editType === 'swap' ? 'active' : ''}`}
+                onClick={() => handleEditTypeChange('swap')}
+              >
+                Intercambiar Turnos
+              </button>
+              <button 
+                className={`edit-button M ${editType === 'M' ? 'active' : ''}`}
+                onClick={() => handleEditTypeChange('M')}
+              >
+                Mañana
+              </button>
+              <button 
+                className={`edit-button T ${editType === 'T' ? 'active' : ''}`}
+                onClick={() => handleEditTypeChange('T')}
+              >
+                Tarde
+              </button>
+              <button 
+                className={`edit-button N ${editType === 'N' ? 'active' : ''}`}
+                onClick={() => handleEditTypeChange('N')}
+              >
+                Noche
+              </button>
+              <button 
+                className={`edit-button F ${editType === 'F' ? 'active' : ''}`}
+                onClick={() => handleEditTypeChange('F')}
+              >
+                Franco
+              </button>
+            </div>
+            {editType === 'swap' && (
+              <p>Selecciona dos celdas para intercambiar sus turnos.</p>
+            )}
+            {editType !== 'swap' && (
+              <p>Haz click en una celda para asignar turno {editType}.</p>
+            )}
           </div>
         </div>
       )}
 
       <div className="table-wrapper">
         <table>
-        <thead>
+          <thead>
             <tr>
-            <th>Enfermero</th>
-            {matriz[0]?.map((_, dayIndex) => {
-              const diaInfo = getDiaInfo(dayIndex + 1);
-              const esDiaEspecial = diaInfo.esFinDeSemana || diaInfo.esFeriado;
-              
-              return (
-                <th 
-                  key={dayIndex} 
-                  className={esDiaEspecial ? 'weekend-day' : ''}
-                  title={diaInfo.esFeriado ? diaInfo.feriadoNombre : undefined}
-                >
-                  <div>{diaInfo.numero}</div>
-                  <div className={`day-name ${esDiaEspecial ? 'special-day' : ''}`}>
-                    {diaInfo.nombre}
-                    {diaInfo.esFeriado && '✨'} {/* Icono para feriados */}
-                  </div>
-                </th>
-              );
-            })}
+              <th className="info-column nombre-column">Enfermero</th>
+              {matriz[0]?.map((_, dayIndex) => {
+                const diaInfo = getDiaInfo(dayIndex + 1);
+                const esDiaEspecial = diaInfo.esFinDeSemana || diaInfo.esFeriado;
+                
+                return (
+                  <th 
+                    key={dayIndex} 
+                    className={esDiaEspecial ? 'weekend-day' : ''}
+                    title={diaInfo.esFeriado ? diaInfo.feriadoNombre : undefined}
+                  >
+                    <div>{diaInfo.numero}</div>
+                    <div className={`day-name ${esDiaEspecial ? 'special-day' : ''}`}>
+                      {diaInfo.nombre}
+                      {diaInfo.esFeriado && '✨'}
+                    </div>
+                  </th>
+                );
+              })}
+              <th className="info-column rotativo-column">Rotativo</th>
             </tr>
           </thead>
           <tbody>
             {matriz.map((row, rowIndex) => (
               <tr key={rowIndex}>
                 <td className="nombre">{enfermeros_Copia[rowIndex]?.nombre || `Enfermero ${rowIndex + 1}`}</td>
-                {row.map((cell, colIndex) => (
-                  <td 
-                    key={colIndex}
-                    className={`cell ${cell} ${editMode ? 'editable' : ''}`}
-                    onClick={() => handleCellClick(rowIndex, colIndex)}
-                    title={`Editar: ${cell}`}
-                  >
-                    {cell}
-                  </td>
-                ))}
+                {row.map((cell, colIndex) => {
+                  const diaInfo = getDiaInfo(colIndex + 1);
+                  const esDiaEspecial = diaInfo.esFinDeSemana || diaInfo.esFeriado;
+                  
+                  return (
+                    <td 
+                      key={colIndex}
+                      className={`cell ${cell} ${editMode ? 'editable' : ''} ${
+                        selectedCell && 
+                        selectedCell.rowIndex === rowIndex && 
+                        selectedCell.colIndex === colIndex ? 'selected' : ''
+                      } ${esDiaEspecial ? 'special-day-column' : ''}`}
+                      onClick={() => handleCellClick(rowIndex, colIndex)}
+                      title={selectedCell ? 'Intercambiar con celda seleccionada' : 'Seleccionar para intercambiar'}
+                    >
+                      {cell}
+                    </td>
+                  );
+                })}
+                <td className={`rotativo ${getHorariosRotativos(rowIndex) === 'Fijo' ? 'fijo' : 'rotativo'}`}>
+                  {getHorariosRotativos(rowIndex)}
+                </td>
               </tr>
             ))}
+            {/* Fila de conteo de turnos */}
+            <tr className="shift-counts">
+              <td>Turnos</td>
+              {matriz[0]?.map((_, colIndex) => {
+                const diaInfo = getDiaInfo(colIndex + 1);
+                const esDiaEspecial = diaInfo.esFinDeSemana || diaInfo.esFeriado;
+                const counts = countShiftsForDay(colIndex);
+                
+                return (
+                  <td key={colIndex} className={`counts-cell ${esDiaEspecial ? 'special-day-column' : ''}`}>
+                    <div className={counts.M < MINIMUM_SHIFTS.M ? 'below-minimum' : 'above-minimum'}>
+                      M: {counts.M}
+                    </div>
+                    <div className={counts.T < MINIMUM_SHIFTS.T ? 'below-minimum' : 'above-minimum'}>
+                      T: {counts.T}
+                    </div>
+                    <div className={counts.N < MINIMUM_SHIFTS.N ? 'below-minimum' : 'above-minimum'}>
+                      N: {counts.N}
+                    </div>
+                  </td>
+                );
+              })}
+              <td></td> {/* Celda vacía para alinear con la columna de rotativos */}
+            </tr>
           </tbody>
         </table>
       </div>

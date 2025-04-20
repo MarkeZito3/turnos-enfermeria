@@ -1,4 +1,4 @@
-import enfermeros from '../data/datos/enfermeros.json'; // Cambiar el nombre por ejemplo_de_enfermeros.json
+import enfermeros_original from '../data/datos/enfermeros.json'; // Cambiar el nombre por ejemplo_de_enfermeros.json
 import feriados2021 from '../data/feriados/feriados_2021.json';
 import feriados2022 from '../data/feriados/feriados_2022.json';
 import feriados2023 from '../data/feriados/feriados_2023.json';
@@ -6,20 +6,22 @@ import feriados2024 from '../data/feriados/feriados_2024.json';
 import feriados2025 from '../data/feriados/feriados_2025.json';
 import feriados2026 from '../data/feriados/feriados_2026.json';
 // Cargar enfermeros desde el JSON
+let enfermeros = JSON.parse(JSON.stringify(enfermeros_original));
 
-// const enfermeros = JSON.parse(
-//   readFileSync(path.join(__dirname, '../../datos/enfermeros.json'), 'utf-8')
-// );
 if (!enfermeros || enfermeros.length === 0) {
     throw new Error("No se encontraron datos de enfermeros");
 }
 
-export let enfermeros_Copia = enfermeros; 
+export let enfermeros_Copia = enfermeros_original; 
 
 // Función para restaurar los datos originales
 const restaurarEnfermeros = () => {
     enfermeros = JSON.parse(JSON.stringify(enfermeros_Copia));
-  };
+    // Inicializar la propiedad francos para cada enfermero
+    enfermeros.forEach(enfermero => {
+        enfermero.francos = [];
+    });
+};
 
 //Cargar feriados desde el JSON
 export const feriados = (anio) => {
@@ -125,27 +127,7 @@ const generarMatrizTurnos = (anio, mes) => {
 };
 
 // los protegidos son los enfermeros que si o si tienen franco los fines de semana y feriados
-let protegidos = [26, 27]; //se les dice "protegidos" porque hacen lo que se conoce como "tareas livianas"
-let enfermeros_M = []
-let enfermeros_T = []
-let enfermeros_N = []
-
-// separa los enfermeros por turnos. 
-enfermeros.forEach(enfermero => {
-    if (!protegidos.includes(enfermero.id) && enfermero.turno === 'M') {
-        enfermeros_M.push(enfermero.id);
-    } else if (!protegidos.includes(enfermero.id) && enfermero.turno === 'T') {
-        enfermeros_T.push(enfermero.id);
-    } else if (!protegidos.includes(enfermero.id) && enfermero.turno === 'N') {
-        enfermeros_N.push(enfermero.id);
-    }
-});
-
-//divido los grupos de enfermeros en dos, pero primero los aleatorizo
-enfermeros_M = enfermeros_M.sort(() => Math.random() - 0.5);
-enfermeros_T = enfermeros_T.sort(() => Math.random() - 0.5);
-enfermeros_N = enfermeros_N.sort(() => Math.random() - 0.5);
-
+const protegidos = [26, 27]; //se les dice "protegidos" porque hacen lo que se conoce como "tareas livianas"
 
 const asignarFrancos = (anio, mes) => {
 
@@ -341,17 +323,210 @@ function planificarNoches(matrizTranspuesta) {
     @returns {Array} Matriz de turnos generada.
 **/
 export function generadorTurnos(anio, mes) {
-
     restaurarEnfermeros();
+
+    // Inicializar arrays de enfermeros por turno
+    let enfermeros_M = [];
+    let enfermeros_T = [];
+    let enfermeros_N = [];
+
+    // Separar los enfermeros por turnos
+    enfermeros.forEach(enfermero => {
+        if (!protegidos.includes(enfermero.id) && enfermero.turno === 'M') {
+            enfermeros_M.push(enfermero.id);
+        } else if (!protegidos.includes(enfermero.id) && enfermero.turno === 'T') {
+            enfermeros_T.push(enfermero.id);
+        } else if (!protegidos.includes(enfermero.id) && enfermero.turno === 'N') {
+            enfermeros_N.push(enfermero.id);
+        }
+    });
+
+    // Aleatorizar los grupos
+    enfermeros_M.sort(() => Math.random() - 0.5);
+    enfermeros_T.sort(() => Math.random() - 0.5);
+    enfermeros_N.sort(() => Math.random() - 0.5);
 
     const turnos = generarMatrizTurnos(anio, mes);
     const francos = asignarFrancos(anio, mes);
     const matrizFusionadaV = matrizFusionada(turnos, francos);
-    // console.log(matrizFusionadaV)
     const matrizTranspuesta = transponerMatriz(matrizFusionadaV);  
     const matrizFinal = planificarNoches(matrizTranspuesta);
 
-    // console.log(matrizFinal)
-
     return matrizFinal;
+}
+
+
+/**
+ * Función para reequilibrar la distribución de enfermeros entre días con exceso y déficit
+ * @param {Array} matrizTurnos - Matriz final generada por generadorTurnos(anio, mes)
+ * @param {number} anio - Año del calendario
+ * @param {number} mes - Mes del calendario (1-12)
+ * @param {Object} minimos - Mínimos requeridos por turno (default: {M: 5, T: 5, N: 4})
+ * @returns {Array} Matriz de turnos reequilibrada
+ */
+export function reequilibrarTurnos(matrizTurnos, anio, mes, minimos = {M: 5, T: 5, N: 4}) {
+    // Crear copia de la matriz para no modificar la original
+    const matrizCopia = JSON.parse(JSON.stringify(matrizTurnos));
+    
+    // Transponer la matriz para trabajar con días como filas
+    const matrizPorDias = transponerMatriz(matrizCopia);
+    const diasTotales = matrizPorDias.length;
+    
+    // Analizar cada día para determinar déficit y exceso
+    const analisisDias = [];
+    
+    for (let dia = 0; dia < diasTotales; dia++) {
+        const fecha = new Date(anio, mes - 1, dia + 1);
+        const esFinDeSemana = fecha.getDay() === 0 || fecha.getDay() === 6;
+        
+        // Contar enfermeros por turno en este día
+        let conteoTurnos = {M: 0, T: 0, N: 0, F: 0, L: 0};
+        matrizPorDias[dia].forEach(turno => {
+            if (turno in conteoTurnos) {
+                conteoTurnos[turno]++;
+            }
+        });
+        
+        // Calcular déficit o exceso por turno
+        const deficitExceso = {
+            M: conteoTurnos.M - minimos.M,
+            T: conteoTurnos.T - minimos.T,
+            N: conteoTurnos.N - minimos.N
+        };
+        
+        analisisDias.push({
+            dia: dia + 1,
+            conteoTurnos,
+            deficitExceso,
+            esFinDeSemana
+        });
+    }
+
+    // Primero identificar días entre semana con exceso para posibles intercambios
+    const diasEntreSemanaConExceso = analisisDias
+        .filter(d => !d.esFinDeSemana && 
+            (d.deficitExceso.M > 0 || d.deficitExceso.T > 0 || d.deficitExceso.N > 0))
+        .sort((a, b) => {
+            const excesoA = Math.max(a.deficitExceso.M, a.deficitExceso.T, a.deficitExceso.N);
+            const excesoB = Math.max(b.deficitExceso.M, b.deficitExceso.T, b.deficitExceso.N);
+            return excesoB - excesoA;
+        });
+
+    // Procesar fines de semana con déficit primero
+    const finesDeSemanaCriticos = analisisDias
+        .filter(d => d.esFinDeSemana && 
+            (d.deficitExceso.M < 0 || d.deficitExceso.T < 0 || d.deficitExceso.N < 0))
+        .sort((a, b) => {
+            const deficitA = Math.min(a.deficitExceso.M, a.deficitExceso.T, a.deficitExceso.N);
+            const deficitB = Math.min(b.deficitExceso.M, b.deficitExceso.T, b.deficitExceso.N);
+            return deficitA - deficitB;
+        });
+
+    // Intentar resolver los déficits de fines de semana
+    for (const diaFinDeSemana of finesDeSemanaCriticos) {
+        const turnosConDeficit = ['M', 'T', 'N']
+            .filter(turno => diaFinDeSemana.deficitExceso[turno] < 0)
+            .sort((a, b) => diaFinDeSemana.deficitExceso[a] - diaFinDeSemana.deficitExceso[b]);
+
+        for (const turnoDeficit of turnosConDeficit) {
+            const deficit = Math.abs(diaFinDeSemana.deficitExceso[turnoDeficit]);
+            let cambiosRealizados = 0;
+
+            // Buscar enfermeros con Franco en el fin de semana que puedan trabajar
+            matrizPorDias[diaFinDeSemana.dia - 1].forEach((turno, enfermeroIndex) => {
+                if (cambiosRealizados >= deficit) return;
+                
+                if (turno === 'F' && enfermeros[enfermeroIndex].horarioRotativo.includes(turnoDeficit)) {
+                    // Buscar un día entre semana con exceso para intercambiar
+                    for (const diaEntreSemana of diasEntreSemanaConExceso) {
+                        if (matrizPorDias[diaEntreSemana.dia - 1][enfermeroIndex] === turnoDeficit &&
+                            diaEntreSemana.deficitExceso[turnoDeficit] > 0) {
+                            // Realizar el intercambio
+                            matrizPorDias[diaFinDeSemana.dia - 1][enfermeroIndex] = turnoDeficit;
+                            matrizPorDias[diaEntreSemana.dia - 1][enfermeroIndex] = 'F';
+                            
+                            // Actualizar conteos
+                            diaFinDeSemana.deficitExceso[turnoDeficit]++;
+                            diaFinDeSemana.conteoTurnos[turnoDeficit]++;
+                            diaFinDeSemana.conteoTurnos.F--;
+                            
+                            diaEntreSemana.deficitExceso[turnoDeficit]--;
+                            diaEntreSemana.conteoTurnos[turnoDeficit]--;
+                            diaEntreSemana.conteoTurnos.F++;
+                            
+                            cambiosRealizados++;
+                            break;
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    // Procesar el resto de los días con déficit
+    const otrosDiasConDeficit = analisisDias
+        .filter(d => !d.esFinDeSemana && 
+            (d.deficitExceso.M < 0 || d.deficitExceso.T < 0 || d.deficitExceso.N < 0))
+        .sort((a, b) => {
+            const deficitA = Math.min(a.deficitExceso.M, a.deficitExceso.T, a.deficitExceso.N);
+            const deficitB = Math.min(b.deficitExceso.M, b.deficitExceso.T, b.deficitExceso.N);
+            return deficitA - deficitB;
+        });
+
+    // Procesar el resto de días con déficit usando la lógica original
+    for (const diaDeficit of otrosDiasConDeficit) {
+        const turnosConDeficit = ['M', 'T', 'N']
+            .filter(turno => diaDeficit.deficitExceso[turno] < 0)
+            .sort((a, b) => diaDeficit.deficitExceso[a] - diaDeficit.deficitExceso[b]);
+
+        if (turnosConDeficit.length === 0) continue;
+
+        for (const turnoDeficit of turnosConDeficit) {
+            const deficit = Math.abs(diaDeficit.deficitExceso[turnoDeficit]);
+            let enfermerosCambiados = 0;
+
+            for (const diaExceso of diasEntreSemanaConExceso) {
+                if (enfermerosCambiados >= deficit) break;
+                if (diaExceso.dia === diaDeficit.dia) continue;
+
+                const enfermeroIds = [];
+                matrizPorDias[diaExceso.dia - 1].forEach((turno, index) => {
+                    if (turno === turnoDeficit && enfermeros[index].horarioRotativo.length > 0) {
+                        enfermeroIds.push({ index, id: enfermeros[index].id });
+                    }
+                });
+
+                if (diaExceso.deficitExceso[turnoDeficit] <= 0) continue;
+
+                enfermeroIds.sort(() => Math.random() - 0.5);
+
+                const disponiblesParaCambio = Math.min(
+                    enfermeroIds.length,
+                    diaExceso.deficitExceso[turnoDeficit],
+                    deficit - enfermerosCambiados
+                );
+
+                for (let i = 0; i < disponiblesParaCambio; i++) {
+                    const enfermeroIndex = enfermeroIds[i].index;
+
+                    if (matrizPorDias[diaDeficit.dia - 1][enfermeroIndex] === 'F' ||
+                        matrizPorDias[diaDeficit.dia - 1][enfermeroIndex] === 'L') {
+                        continue;
+                    }
+
+                    matrizPorDias[diaExceso.dia - 1][enfermeroIndex] = 'F';
+                    matrizPorDias[diaDeficit.dia - 1][enfermeroIndex] = turnoDeficit;
+
+                    enfermerosCambiados++;
+                    diaExceso.deficitExceso[turnoDeficit]--;
+                    diaExceso.conteoTurnos[turnoDeficit]--;
+                    diaExceso.conteoTurnos.F++;
+
+                    if (diaExceso.deficitExceso[turnoDeficit] <= 0) break;
+                }
+            }
+        }
+    }
+
+    return transponerMatriz(matrizPorDias);
 }
