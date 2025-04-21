@@ -28,7 +28,6 @@ const ScheduleTable = () => {
         setMatriz(JSON.parse(savedData));
       } else {
         const nuevosTurnos = generadorTurnos(year, month);
-        const turnosReequilibrados = reequilibrarTurnos(nuevosTurnos, year, month, {M: 4, T: 4, N: 4});
         setMatriz(nuevosTurnos);
       }
     };
@@ -41,7 +40,10 @@ const ScheduleTable = () => {
     if (matriz.length > 0) {
       localStorage.setItem(getStorageKey(), JSON.stringify(matriz));
     }
-  }, [matriz, year, month]);
+  }, [matriz, year, month, getStorageKey]);
+
+  const minimoTurnos = { M: 6, T: 6, N: 4 };
+  const minimoTurnos_weekend = { M: 4, T: 4, N: 4 };
 
   const handleCellClick = (rowIndex, colIndex) => {
     if (!editMode) return;
@@ -93,7 +95,9 @@ const ScheduleTable = () => {
       const excelData = [
         header,
         ...matriz.map((row, rowIndex) => [
-          enfermeros_Copia[rowIndex]?.nombre || `Enfermero ${rowIndex + 1}`,
+          enfermeros_Copia[rowIndex] 
+            ? `[${enfermeros_Copia[rowIndex].turno}] ${enfermeros_Copia[rowIndex].nombre}`
+            : `Enfermero ${rowIndex + 1}`,
           ...row
         ])
       ];
@@ -113,7 +117,7 @@ const ScheduleTable = () => {
   const resetToDefault = () => {
     if (window.confirm('¿Desea generar nuevamente los turnos?\nSe perderán los cambios no guardados.')) {
       const nuevosTurnos = generadorTurnos(year, month);
-      const turnosReequilibrados = reequilibrarTurnos(nuevosTurnos, year, month, {M: 4, T: 4, N: 4});
+      const turnosReequilibrados = reequilibrarTurnos(nuevosTurnos, year, month, minimoTurnos_weekend);
       setMatriz(turnosReequilibrados);
     }
   };
@@ -144,17 +148,21 @@ const ScheduleTable = () => {
     };
   };
 
-  const MINIMUM_SHIFTS = { M: 5, T: 5, N: 4 };
+  // const MINIMUM_SHIFTS = { M: 5, T: 5, N: 4 };
 
-  // Función para contar turnos por día
+  // Función para contar turnos por día y validar contra los mínimos según el día
   const countShiftsForDay = (dayIndex) => {
     const counts = { M: 0, T: 0, N: 0 };
+    const diaInfo = getDiaInfo(dayIndex + 1);
+    // Aplicar mínimos de fin de semana tanto para feriados como para fines de semana
+    const minimosAplicar = diaInfo.esFinDeSemana || diaInfo.esFeriado ? minimoTurnos_weekend : minimoTurnos;
+    
     matriz.forEach(row => {
       if (row[dayIndex] === 'M') counts.M++;
       if (row[dayIndex] === 'T') counts.T++;
       if (row[dayIndex] === 'N') counts.N++;
     });
-    return counts;
+    return { counts, minimosAplicar };
   };
 
   // Función para obtener el texto de horarios rotativos
@@ -275,7 +283,11 @@ const ScheduleTable = () => {
           <tbody>
             {matriz.map((row, rowIndex) => (
               <tr key={rowIndex}>
-                <td className="nombre">{enfermeros_Copia[rowIndex]?.nombre || `Enfermero ${rowIndex + 1}`}</td>
+                <td className="nombre">
+                  {enfermeros_Copia[rowIndex] 
+                    ? `[${enfermeros_Copia[rowIndex].turno}] ${enfermeros_Copia[rowIndex].nombre}` 
+                    : `Enfermero ${rowIndex + 1}`}
+                </td>
                 {row.map((cell, colIndex) => {
                   const diaInfo = getDiaInfo(colIndex + 1);
                   const esDiaEspecial = diaInfo.esFinDeSemana || diaInfo.esFeriado;
@@ -306,17 +318,17 @@ const ScheduleTable = () => {
               {matriz[0]?.map((_, colIndex) => {
                 const diaInfo = getDiaInfo(colIndex + 1);
                 const esDiaEspecial = diaInfo.esFinDeSemana || diaInfo.esFeriado;
-                const counts = countShiftsForDay(colIndex);
+                const { counts, minimosAplicar } = countShiftsForDay(colIndex);
                 
                 return (
                   <td key={colIndex} className={`counts-cell ${esDiaEspecial ? 'special-day-column' : ''}`}>
-                    <div className={counts.M < MINIMUM_SHIFTS.M ? 'below-minimum' : 'above-minimum'}>
+                    <div className={counts.M < minimosAplicar.M ? 'below-minimum' : 'above-minimum'}>
                       M: {counts.M}
                     </div>
-                    <div className={counts.T < MINIMUM_SHIFTS.T ? 'below-minimum' : 'above-minimum'}>
+                    <div className={counts.T < minimosAplicar.T ? 'below-minimum' : 'above-minimum'}>
                       T: {counts.T}
                     </div>
-                    <div className={counts.N < MINIMUM_SHIFTS.N ? 'below-minimum' : 'above-minimum'}>
+                    <div className={counts.N < minimosAplicar.N ? 'below-minimum' : 'above-minimum'}>
                       N: {counts.N}
                     </div>
                   </td>

@@ -85,7 +85,7 @@ const obtenerDiasNoLaborables = (anio, mes) => {
         diasEntreS,
         diasFinde,
         diasFeriados,
-        diasNoLaborales: [...new Set([...diasFinde, ...diasFeriados])].sort((a, b) => a - b)
+        diasNoLaborables: [...new Set([...diasFinde, ...diasFeriados])].sort((a, b) => a - b)
     };
 };
 
@@ -131,14 +131,14 @@ const protegidos = [26, 27]; //se les dice "protegidos" porque hacen lo que se c
 
 const asignarFrancos = (anio, mes) => {
 
-    let { diasTotales, diasFinde, diasFeriados, diasEntreS, diasNoLaborales } = obtenerDiasNoLaborables(anio, mes);
+    let { diasTotales, diasFinde, diasFeriados, diasEntreS, diasNoLaborables } = obtenerDiasNoLaborables(anio, mes);
 
     // asignar la cantidad de francos que le corresponden a cada enfermero
     enfermeros.forEach(enfermero => {
         if (enfermero.horasLaborales === 40) {
-            enfermero.francos.push(diasNoLaborales.length);
+            enfermero.francos.push(diasNoLaborables.length);
         } else {
-            enfermero.francos.push(diasNoLaborales.length - 2);
+            enfermero.francos.push(diasNoLaborables.length - 2);
         }
     });
 
@@ -223,106 +223,133 @@ function transponerMatriz(matriz) {
 
 //
 function planificarNoches(matrizTranspuesta) {
-
     let matriz = [];
-    // let cont_dias = 0;
-    // Contar la cantidad de turnos M, T y N
+    const nochesMinimas = 3;
+    const nochesMaximas = 5;
+    const nochesTotales = new Array(enfermeros.length).fill(0);
+    
+    // Identificar enfermeros que pueden hacer noche (tienen N en horarioRotativo)
+    const enfermerosNocturnos = enfermeros.map((enfermero, index) => ({
+        index,
+        id: enfermero.id,
+        puedeNoche: enfermero.horarioRotativo && enfermero.horarioRotativo.includes('N')
+    })).filter(e => e.puedeNoche);
+
     matrizTranspuesta.forEach(dia => {
         let cont_M = [];
-        let rotativoM = [];
         let cont_T = [];
-        let rotativoT = [];
         let cont_N = [];
         let cont_F = [];
         let cont_L = [];
-        let i = 0; // ubicacion de cada enfermeros
-        dia.forEach(turno =>{
+        let rotativosDisponibles = [];
+        let i = 0;
+        
+        // Contar turnos actuales y verificar disponibilidad para noche
+        dia.forEach(turno => {
+            const enfermero = enfermeros[i];
             if (turno === 'M') {
-                if (enfermeros[i].horarioRotativo.length > 0){
-                    rotativoM.push(enfermeros[i].id);
+                cont_M.push({id: enfermero.id, index: i});
+                if (enfermero.horarioRotativo && enfermero.horarioRotativo.includes('N')) {
+                    rotativosDisponibles.push({
+                        id: enfermero.id, 
+                        index: i, 
+                        noches: nochesTotales[i],
+                        turnoActual: 'M'
+                    });
                 }
-                cont_M.push(enfermeros[i].id);
             } else if (turno === 'T') {
-                if (enfermeros[i].horarioRotativo.length > 0){
-                    rotativoT.push(enfermeros[i].id);
+                cont_T.push({id: enfermero.id, index: i});
+                if (enfermero.horarioRotativo && enfermero.horarioRotativo.includes('N')) {
+                    rotativosDisponibles.push({
+                        id: enfermero.id, 
+                        index: i, 
+                        noches: nochesTotales[i],
+                        turnoActual: 'T'
+                    });
                 }
-                cont_T.push(enfermeros[i].id);
             } else if (turno === 'N') {
-                cont_N.push(enfermeros[i].id);
+                cont_N.push({id: enfermero.id, index: i});
+                nochesTotales[i]++;
             } else if (turno === 'F') {
-                cont_F.push(enfermeros[i].id);
+                cont_F.push({id: enfermero.id, index: i});
             } else if (turno === 'L') {
-                cont_L.push(enfermeros[i].id);
+                cont_L.push({id: enfermero.id, index: i});
             }
             i++;
         });
-        while ((cont_M.length > 6 || cont_T.length > 6) && cont_N.length <= 4) {
-            if (cont_M.length > 6 && rotativoM.length > 0 && cont_N.length < 6) {
-                const randomIndex = Math.floor(Math.random() * rotativoM.length);
-                const randomEnfermero = rotativoM[randomIndex];
-                // se verifica que esté en cont_M antes de moverlo
-                const indexEnM = cont_M.indexOf(randomEnfermero);
-                if (indexEnM !== -1) { // si está en cont_M lo movemos a cont_N
-                    cont_M.splice(indexEnM, 1);
-                    cont_N.push(randomEnfermero);
+
+        // Ordenar rotativos disponibles por cantidad de noches (menor a mayor)
+        rotativosDisponibles.sort((a, b) => a.noches - b.noches);
+
+        // Asignar noches priorizando enfermeros con menos noches totales
+        while (cont_N.length < 4 && rotativosDisponibles.length > 0) {
+            const candidato = rotativosDisponibles[0];
+            
+            // Verificar si el enfermero no excederá el máximo de noches
+            if (nochesTotales[candidato.index] < nochesMaximas) {
+                // Remover de su turno actual
+                if (candidato.turnoActual === 'M') {
+                    const index = cont_M.findIndex(e => e.id === candidato.id);
+                    if (index !== -1) cont_M.splice(index, 1);
+                } else {
+                    const index = cont_T.findIndex(e => e.id === candidato.id);
+                    if (index !== -1) cont_T.splice(index, 1);
                 }
-                rotativoM.splice(randomIndex, 1);
+                
+                // Asignar a noche
+                cont_N.push({id: candidato.id, index: candidato.index});
+                nochesTotales[candidato.index]++;
             }
-            if (cont_T.length > 6 && rotativoT.length > 0 && cont_N.length < 6) {
-                const randomIndex = Math.floor(Math.random() * rotativoT.length);
-                const randomEnfermero = rotativoT[randomIndex];
-                const indexEnT = cont_T.indexOf(randomEnfermero);
-                if (indexEnT !== -1) {
-                    cont_T.splice(indexEnT, 1);
-                    cont_N.push(randomEnfermero);
-                }
-                rotativoT.splice(randomIndex, 1);
-            }
+            
+            rotativosDisponibles.shift();
         }
-        
 
-        //asignar en la matriz 'matriz' los turnos M, T, F y L dependiendo de los nuevos criterios
-        let diaMatriz = Array(enfermeros.length).fill(''); 
-        cont_M.forEach(id => {
-            const index = enfermeros.findIndex(enfermero => enfermero.id === id);
-            diaMatriz[index] = 'M'; // Asignar turno M
-        });
-        cont_T.forEach(id => {
-            const index = enfermeros.findIndex(enfermero => enfermero.id === id);
-            diaMatriz[index] = 'T'; // Asignar turno T
-        });
-        cont_N.forEach(id => {
-            const index = enfermeros.findIndex(enfermero => enfermero.id === id);
-            diaMatriz[index] = 'N'; // Asignar turno N
-        });
-        cont_F.forEach(id => {
-            const index = enfermeros.findIndex(enfermero => enfermero.id === id);
-            diaMatriz[index] = 'F'; // Asignar franco
-        });
-        cont_L.forEach(id => {
-            const index = enfermeros.findIndex(enfermero => enfermero.id === id);
-            diaMatriz[index] = 'L'; // Asignar licencia
-        });
+        // Asignar turnos en la matriz final
+        let diaMatriz = Array(enfermeros.length).fill('');
+        cont_M.forEach(({index}) => diaMatriz[index] = 'M');
+        cont_T.forEach(({index}) => diaMatriz[index] = 'T');
+        cont_N.forEach(({index}) => diaMatriz[index] = 'N');
+        cont_F.forEach(({index}) => diaMatriz[index] = 'F');
+        cont_L.forEach(({index}) => diaMatriz[index] = 'L');
 
-        matriz.push(diaMatriz); // Agregar el día a la matriz
-
-        // cont_dias++;
-        // console.log(`=======DIA ${cont_dias}========`);
-        // console.log(`Turnos M: ${rotativoM.length}/${cont_M.length}: ${rotativoM}`);
-        // console.log(`Turnos T: ${rotativoT.length}/${cont_T.length}: ${rotativoT}`);
-        // console.log(`Turnos N: ${cont_N.length}: ${cont_N}`);
+        matriz.push(diaMatriz);
     });
-    return transponerMatriz(matriz);
-}
 
+    // Asegurar mínimo de noches por enfermero
+    const matrizResultado = transponerMatriz(matriz);
+    
+    // Para cada enfermero que puede hacer noche y no alcanzó el mínimo
+    enfermerosNocturnos.forEach(enfermeroNocturno => {
+        const nochesActuales = nochesTotales[enfermeroNocturno.index];
+        if (nochesActuales < nochesMinimas) {
+            const nochesNecesarias = nochesMinimas - nochesActuales;
+            let nochesAgregadas = 0;
+            
+            // Buscar días donde podemos agregar noches
+            matriz.forEach((dia, diaIndex) => {
+                if (nochesAgregadas >= nochesNecesarias) return;
+                
+                const turnoActual = dia[enfermeroNocturno.index];
+                if ((turnoActual === 'M' || turnoActual === 'T') && 
+                    dia.filter(t => t === 'N').length < 4) {
+                    dia[enfermeroNocturno.index] = 'N';
+                    nochesAgregadas++;
+                }
+            });
+        }
+    });
+
+    return matrizResultado;
+}
 
 /**
     Generador de turnos para enfermeros en un mes específico.
     @param {number} anio - Año del calendario.
     @param {number} mes - Mes del calendario (1-12).
+    @param {number} maxNochesPorMes - Máximo de noches por enfermero por mes (opcional, por defecto 5).
     @returns {Array} Matriz de turnos generada.
 **/
-export function generadorTurnos(anio, mes) {
+export function generadorTurnos(anio, mes, maxNochesPorMes = 5) {
     restaurarEnfermeros();
 
     // Inicializar arrays de enfermeros por turno
@@ -352,22 +379,83 @@ export function generadorTurnos(anio, mes) {
     const matrizTranspuesta = transponerMatriz(matrizFusionadaV);  
     const matrizFinal = planificarNoches(matrizTranspuesta);
 
-    return matrizFinal;
+    // Reequilibrar los turnos incluyendo el límite de noches por enfermero
+    return reequilibrarTurnos(matrizFinal, anio, mes, undefined, undefined, maxNochesPorMes);
 }
-
 
 /**
  * Función para reequilibrar la distribución de enfermeros entre días con exceso y déficit
  * @param {Array} matrizTurnos - Matriz final generada por generadorTurnos(anio, mes)
  * @param {number} anio - Año del calendario
  * @param {number} mes - Mes del calendario (1-12)
- * @param {Object} minimos - Mínimos requeridos por turno (default: {M: 5, T: 5, N: 4})
+ * @param {Object} minimos - Mínimos requeridos por turno para días de semana
+ * @param {Object} minimosFinDeSemana - Mínimos requeridos por turno para fines de semana (opcional)
+ * @param {number} maxNochesPorMes - Máximo de noches por enfermero por mes (opcional)
  * @returns {Array} Matriz de turnos reequilibrada
  */
-export function reequilibrarTurnos(matrizTurnos, anio, mes, minimos = {M: 5, T: 5, N: 4}) {
+export function reequilibrarTurnos(matrizTurnos, anio, mes, minimos = {M: 6, T: 6, N: 4}, minimosFinDeSemana = {M: 4, T: 4, N: 4}, maxNochesPorMes = 5) {
     // Crear copia de la matriz para no modificar la original
     const matrizCopia = JSON.parse(JSON.stringify(matrizTurnos));
     
+        // Función para equilibrar noches por enfermero
+    const equilibrarNochesPorEnfermero = (matriz) => {
+        const nochesEnfermero = new Array(matriz.length).fill(0);
+        const matrizTranspuesta = transponerMatriz(matriz);
+
+        // Contar noches actuales por enfermero
+        matriz.forEach((enfermero, enfIndex) => {
+            enfermero.forEach(turno => {
+                if (turno === 'N') nochesEnfermero[enfIndex]++;
+            });
+        });
+
+        // Para cada día, revisar y ajustar si es necesario
+        matrizTranspuesta.forEach((dia, diaIndex) => {
+            const enfermerosConExceso = [];
+            const enfermerosDisponibles = [];
+
+            // Identificar enfermeros con exceso de noches y posibles reemplazos
+            dia.forEach((turno, enfIndex) => {
+                const enfermero = enfermeros[enfIndex];
+                const puedeHacerNoche = enfermero.horarioRotativo && enfermero.horarioRotativo.includes('N');
+
+                if (turno === 'N' && nochesEnfermero[enfIndex] > maxNochesPorMes) {
+                    enfermerosConExceso.push(enfIndex);
+                } else if (turno !== 'N' && turno !== 'F' && turno !== 'L' && 
+                        puedeHacerNoche && nochesEnfermero[enfIndex] < maxNochesPorMes) {
+                    // Verificar que el enfermero pueda rotar desde su turno actual
+                    const turnoActual = turno;
+                    if (enfermero.horarioRotativo.includes(turnoActual)) {
+                        enfermerosDisponibles.push({
+                            index: enfIndex,
+                            turnoActual: turnoActual
+                        });
+                    }
+                }
+            });
+
+            // Realizar intercambios necesarios
+            enfermerosConExceso.forEach(excesoIndex => {
+                if (enfermerosDisponibles.length > 0) {
+                    const disponible = enfermerosDisponibles.shift();
+                    const enfermeroExceso = enfermeros[excesoIndex];
+                    
+                    // Verificar que ambos enfermeros puedan hacer el intercambio según sus horarios rotativos
+                    if (enfermeroExceso.horarioRotativo.includes(disponible.turnoActual)) {
+                        matriz[disponible.index][diaIndex] = 'N';
+                        matriz[excesoIndex][diaIndex] = disponible.turnoActual;
+                        
+                        // Actualizar contadores
+                        nochesEnfermero[excesoIndex]--;
+                        nochesEnfermero[disponible.index]++;
+                    }
+                }
+            });
+        });
+
+        return matriz;
+    };
+
     // Transponer la matriz para trabajar con días como filas
     const matrizPorDias = transponerMatriz(matrizCopia);
     const diasTotales = matrizPorDias.length;
@@ -378,6 +466,12 @@ export function reequilibrarTurnos(matrizTurnos, anio, mes, minimos = {M: 5, T: 
     for (let dia = 0; dia < diasTotales; dia++) {
         const fecha = new Date(anio, mes - 1, dia + 1);
         const esFinDeSemana = fecha.getDay() === 0 || fecha.getDay() === 6;
+const feriadosDelMes = feriados(anio);
+        const esFeriado = feriadosDelMes.some(f => {
+            const [, fechaMes, fechaDia] = f.fecha.split('-').map(Number);
+            return fechaMes === mes && fechaDia === dia + 1;
+        });
+        const minimosActuales = (esFinDeSemana || esFeriado) ? minimosFinDeSemana : minimos;
         
         // Contar enfermeros por turno en este día
         let conteoTurnos = {M: 0, T: 0, N: 0, F: 0, L: 0};
@@ -387,11 +481,11 @@ export function reequilibrarTurnos(matrizTurnos, anio, mes, minimos = {M: 5, T: 
             }
         });
         
-        // Calcular déficit o exceso por turno
+        // Calcular déficit o exceso por turno usando los mínimos correspondientes
         const deficitExceso = {
-            M: conteoTurnos.M - minimos.M,
-            T: conteoTurnos.T - minimos.T,
-            N: conteoTurnos.N - minimos.N
+            M: conteoTurnos.M - minimosActuales.M,
+            T: conteoTurnos.T - minimosActuales.T,
+            N: conteoTurnos.N - minimosActuales.N
         };
         
         analisisDias.push({
@@ -528,5 +622,9 @@ export function reequilibrarTurnos(matrizTurnos, anio, mes, minimos = {M: 5, T: 
         }
     }
 
-    return transponerMatriz(matrizPorDias);
+    // Después de todos los reequilibrios, aplicar el límite de noches por enfermero
+    const matrizReequilibrada = transponerMatriz(matrizPorDias);
+    const matrizFinal = equilibrarNochesPorEnfermero(matrizReequilibrada);
+
+    return matrizFinal;
 }
